@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>操作复盘 · 20261009-获取电池信息测试</title>
+<style>
+  :root{
+    --ink:#1b1f24; --muted:#6b7280; --line:#e5e7eb; --bg:#f7f8fa; --card:#fff;
+    --red:#c1121f; --red-bg:#fdecec; --red-line:#e04b4b;
+    --amber:#b45309; --amber-bg:#fff7ed; --green:#15803d; --green-bg:#ecfdf3; --blue:#1d4ed8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 24px 64px}
+  header.report{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px 28px 22px;
+       box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  h1{margin:0 0 6px;font-size:26px;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:13px}
+  .chips{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:12.5px;background:#fbfbfd}
+  .chip.bad{color:var(--red);border-color:var(--red-line);background:var(--red-bg)}
+  .chip.ok{color:var(--green);border-color:#a7e0bf;background:var(--green-bg)}
+  .chip.warn{color:var(--amber);border-color:#f0c48a;background:var(--amber-bg)}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 28px;margin-top:20px;
+       box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  h2{font-size:19px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  h2 .n{display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:8px;
+       background:#eef2ff;color:var(--blue);font-size:14px;margin-right:10px}
+  h3{font-size:15.5px;margin:20px 0 8px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;vertical-align:top;text-align:left}
+  th{background:#f3f4f6;font-weight:600;white-space:nowrap}
+  td.t{white-space:nowrap;font-variant-numeric:tabular-nums;color:#374151;font-size:13px}
+  td.ev{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);max-width:270px;word-break:break-all}
+  tr.problem{background:var(--red-bg)}
+  tr.problem td{border-color:#f3c6c6}
+  tr.problem td:first-child{border-left:4px solid var(--red)}
+  tr.problem .txt{color:#7f1010}
+  .tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;font-size:12px;
+       background:var(--red);color:#fff;white-space:nowrap}
+  .tag.warn{background:var(--amber)}
+  .tag.ok{background:var(--green)}
+  .id{display:inline-block;min-width:34px;padding:1px 6px;border-radius:6px;background:#eef2ff;color:var(--blue);
+      font:12px/1.5 ui-monospace,Menlo,monospace;text-align:center}
+  a{color:var(--blue);text-decoration:none;border-bottom:1px dotted #9db4f0}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 14px;font-size:14px}
+  .kv dt{color:var(--muted)}
+  .kv dd{margin:0}
+  .note{background:#fbfbfd;border:1px dashed var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px;color:#374151}
+  .legend{font-size:13px;color:#374151;background:#fbfbfd;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .legend code{background:#eef2ff;border-radius:4px;padding:1px 5px;font-size:12px}
+  .card{border:1px solid var(--line);border-left:4px solid #c7d2fe;border-radius:10px;padding:14px 16px;margin:12px 0;background:#fdfdff}
+  .card.r1{border-left-color:#ef4444}.card.r2{border-left-color:#f59e0b}
+  .card.r3{border-left-color:#8b5cf6}.card.r4{border-left-color:#0ea5e9}
+  .card h4{margin:0 0 8px;font-size:15px}
+  .card .cls{font-size:12px;color:#fff;background:#6b7280;border-radius:6px;padding:1px 8px;margin-left:8px}
+  .card .cls.env{background:#f59e0b}.card .cls.fw{background:#8b5cf6}
+  .card .cls.model{background:#ef4444}.card .cls.task{background:#0ea5e9}
+  .dec{color:var(--amber);font-weight:600;white-space:nowrap}
+  ul{margin:6px 0 6px 20px;padding:0}
+  li{margin:3px 0}
+  footer{margin-top:20px;color:var(--muted);font-size:12.5px;line-height:1.8}
+  footer code{background:#eef2ff;border-radius:4px;padding:1px 5px}
+  @media print{body{background:#fff}section,header.report{box-shadow:none;break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="report">
+  <h1>操作复盘 · 20261009-获取电池信息测试</h1>
+  <div class="sub">被复盘仓库 <code>&lt;analyzed-repo&gt;</code> · 报告生成 2026-10-09 16:36 · 决策回写 17:05 (+08:00) · 数据来源：运行数据库 traces、运行产物目录、git 历史、操作侧会话记录</div>
+  <div class="chips">
+    <span class="chip bad">运行 1（Flash）：任务失败</span>
+    <span class="chip warn">运行 2（Pro）：任务完成，但结论不完整 + 7 次静默降级</span>
+    <span class="chip">2 次运行 / 28 条关键事件 / 10 个问题 / 4 类根因 / 10 个改进项</span>
+    <span class="chip ok">任务目标达成：电量 100%（已充满）</span>
+  </div>
+</header>
+
+<!-- ===================== 1 ===================== -->
+<section id="s1">
+  <h2><span class="n">1</span>事项简介</h2>
+  <dl class="kv">
+    <dt>事项名称</dt><dd>20261009-获取电池信息测试（用例目标：<code>Open Settings and check the Battery level</code>）</dd>
+    <dt>执行时间</dt><dd>2026-10-09 14:14:44 – 14:32:33（+08:00）：运行 1 <b>14:14:44–14:14:56</b>（12s）、运行 2 <b>14:30:36–14:32:33</b>（117s）；中间 15 分 40 秒为人工改档与重跑</dd>
+    <dt>执行人</dt><dd>&lt;operator&gt;（通过 Web 控制台触发与改档）＋ &lt;analyzed-repo&gt; Agent（宿主编排，模型 <code>deepseek-official / deepseek-v4-flash</code>）＋ 设备 &lt;device-model&gt; / Android 13（serial <code>&lt;device-serial&gt;</code>，adb shell uid 2000）</dd>
+    <dt>执行概况</dt><dd>同日 13:51–14:00 已落地 3 个 helper 修复提交并把 bundled helper 升到 v1.3.1；14:14:44 以 <b>Flash profile</b> 首次触发本用例，helper 安装并 attach 成功（4s）后，FlashRunner 在初始化 LLM 时立即报错，会话在 12s 内 failed；14:30:36 改以 <b>Pro profile</b> 重跑，经历 59.8s 静默（adb 探测超时）、UIAutomator2 降级与回切后，4 步内完成任务并读到电量。</dd>
+    <dt>结果</dt><dd><b>功能结论：达成</b>——<code>battery_check</code> 记录「Level 100% / 已充满」，最终页面为「电池」页 100%。<br>
+      <b>质量结论：未达标</b>——运行 1 直接失败；运行 2 的判定为 <code>passed=1 / inconclusive=1</code>；运行 2 全程存在 7 次静默降级（记忆压缩链路 4 次回退、视觉摘要 3 次失败），成功是在能力残缺状态下取得的；归档出的 trace 目录为空（<code>0 images / 0 steps</code>）。</dd>
+  </dl>
+  <div class="note" style="margin-top:14px">
+    <b>一句话结论：</b>用例本体没问题，失败与降级都来自「环境无 Google 凭据，而 Flash/记忆/摘要链路仍硬编码 Google」这一条主线（P1、P2），叠加设备侧 adb 探测 30s 超时引发的 60s 空转与后端切换（P3、P4），以及若干框架门禁与归档缺陷（P5–P7、P9）；前置页面未复位与验收口径缺失构成流程侧的次要原因（P8）。
+  </div>
+</section>
+
+<!-- ===================== 2 ===================== -->
+<section id="s2">
+  <h2><span class="n">2</span>详细执行时间线</h2>
+  <div class="legend">
+    <b>标记规则：</b><span class="tag">问题引入</span> 该时间点埋下后续故障；
+    <span class="tag">问题放大</span> 已有问题在此被扩大或产生额外代价；
+    <span class="tag">问题暴露</span> 问题在此以可观测形式呈现（失败/异常/耗时）；
+    <span class="tag ok">问题规避</span> 有效的应对动作。
+    红色底纹行 = 含问题的条目（共 <b>10</b> 条）；「证据」列给出可复查来源（<code>DB 表#行</code>／产物文件／<code>git:commit</code>／会话 <code>seq</code>）。
+  </div>
+  <table>
+    <thead>
+      <tr><th style="width:74px">ID</th><th style="width:150px">时间 (+08:00)</th><th>事件（执行人 + 动作 + 对象）</th><th style="width:96px">标记</th><th>证据</th></tr>
+    </thead>
+    <tbody>
+      <tr class="problem" id="T1"><td><span class="id">T1</span></td><td class="t">10-09 ≤10:36</td>
+        <td class="txt">操作侧会话在整合分支时（该会话的命令原文已含 <code>deepseek-flash</code>，故落盘不晚于此刻；更早时刻无证据），工作区配置档位已是 <code>openai/deepseek-flash</code>（<code>config/&lt;analyzed-repo&gt;.jsonc</code> 未提交修改），而 Flash 链路的模型入口仍固定为 Google 客户端（<code>&lt;analyzed-repo&gt;/agents/flash/runner.py:287</code> 硬编码 <code>gemini-2.5-flash</code>；<code>summarizer.py:169/173</code> 用配置里的模型名调用 <code>get_google_llm</code>）</td>
+        <td><span class="tag">问题引入</span></td><td class="ev">会话 seq≈6-30（<code>sed 's/deepseek-flash/…' config/&lt;analyzed-repo&gt;.jsonc</code>）；<code>git status</code> 未提交；代码硬编码位于 flash/runner.py:287（该硬编码为上游既有，非当日引入）</td></tr>
+      <tr id="T2"><td><span class="id">T2</span></td><td class="t">13:51 / 14:00</td>
+        <td class="txt">Agent 为修复 helper 令牌通道与组件名比较，提交 <code>c9f7266</code>、<code>b251263</code>、<code>4cd590a</code>，并将 bundled helper 升到 v1.3.1（versionCode 8）</td>
+        <td><span class="tag ok">问题规避</span></td><td class="ev">git:c9f7266 / b251263 / 4cd590a；packages/…/helper_manifest.json</td></tr>
+      <tr id="T3"><td><span class="id">T3</span></td><td class="t">14:14:44</td>
+        <td class="txt">操作人以 <b>Flash profile</b> 通过 Web 控制台触发用例，会话 <code>&lt;session-id-1&gt;</code> 启动（12s 后失败）</td>
+        <td></td><td class="ev">DB:sessions#&lt;session-id-1&gt;（profile=flash）；DB:traces#session start</td></tr>
+      <tr id="T4"><td><span class="id">T4</span></td><td class="t">14:14:44–48</td>
+        <td class="txt">helper 重新安装并 attach 成功：<code>&lt;helper-endpoint&gt;:&lt;port&gt; (v1.3.1, protocol 3)</code>，层级来源 = accessibility helper</td>
+        <td><span class="tag ok">问题规避</span></td><td class="ev">DB:traces payload（helper_manager attach）</td></tr>
+      <tr class="problem" id="T5"><td><span class="id">T5</span></td><td class="t">14:14:48–49</td>
+        <td class="txt">保活策略连续失败：<code>set-wakelock: Unknown command</code>、USB stay-awake 策略写入失败，退回 5 秒主机心跳</td>
+        <td><span class="tag warn">问题引入</span></td><td class="ev">DB:traces（awake_lease / awake_service）</td></tr>
+      <tr class="problem" id="T6"><td><span class="id">T6</span></td><td class="t">14:14:50–56</td>
+        <td class="txt">启动 scrcpy 录屏，等待 6.0s 未收到 <code>Recording started</code> 才放行——这段准备工作在随后 0 秒内被证明是白做的</td>
+        <td><span class="tag">问题放大</span></td><td class="ev">DB:traces（unified_controller / video）</td></tr>
+      <tr class="problem" id="T7"><td><span class="id">T7</span></td><td class="t">14:14:56</td>
+        <td class="txt">FlashRunner 启动即抛错：<code>1 validation error for ChatGoogleGenerativeAI — API key required for Gemini Developer API</code>，会话 <code>failed</code>（12s），归档 <code>0 images / 0 steps</code></td>
+        <td><span class="tag">问题暴露</span></td><td class="ev">DB:traces（agent error / engine session ended failed）；run_outcome 缺失</td></tr>
+      <tr id="T8"><td><span class="id">T8</span></td><td class="t">14:30:36</td>
+        <td class="txt">操作人改以 <b>Pro profile</b> 重跑同一用例，会话 <code>&lt;session-id-2&gt;</code> 启动</td>
+        <td><span class="tag ok">问题规避</span></td><td class="ev">DB:sessions#&lt;session-id-2&gt;（profile=pro）</td></tr>
+      <tr class="problem" id="T9"><td><span class="id">T9</span></td><td class="t">14:30:36–14:31:35</td>
+        <td class="txt"><b>59.8s 静默</b>：<code>adb shell dumpsys package &lt;app-package&gt;</code> 挂起 30s 超时 → 屏幕客户端判定 helper 不可用，降级 UIAutomator2 并安排 30s 后重试 helper</td>
+        <td><span class="tag">问题引入</span></td><td class="ev">DB:traces（screen_client_factory 超时原文）；自动检测的静默间隔 59.8s</td></tr>
+      <tr class="problem" id="T10"><td><span class="id">T10</span></td><td class="t">14:31:40</td>
+        <td class="txt">UIAutomator2 连接成功，层级来源切换为 UIAutomator2（此时 helper 其实只是被 adb 探测卡住，并未损坏）。<b>该运行的前半段（规划 + step1 的 tap(72,143)）实际由 UIAutomator2 感知与操控</b></td>
+        <td><span class="tag">问题放大</span></td><td class="ev">DB:traces（ui_automator_client / hierarchy_backend）</td></tr>
+      <tr class="problem" id="T11"><td><span class="id">T11</span></td><td class="t">14:31:41–47</td>
+        <td class="txt">录屏再次等待 6.0s；规划器接管（起始页面为上一轮调试遗留的「无障碍」设置页，被迫先规划 2 次返回导航）</td>
+        <td><span class="tag">问题放大</span></td><td class="ev">DB:traces（video / planner）；notes/task_plan.md 第 1 条</td></tr>
+      <tr id="T12"><td><span class="id">T12</span></td><td class="t">14:31:47–59</td>
+        <td class="txt">规划器产出计划、2 次 <code>save_note</code> 与 1 次 <code>update_note</code>，写入 <code>battery_check</code> 与 <code>task_plan</code>，计划通过校验（3 次 LLM 调用）</td>
+        <td></td><td class="ev">DB:traces#tool/span；notes/battery_check.md、task_plan.md</td></tr>
+      <tr class="problem" id="T13"><td><span class="id">T13</span></td><td class="t">14:32:00</td>
+        <td class="txt">操作器首次动作被 <b>plan ledger gate</b> 退回（「未执行：当前里程碑未置为进行中」），并把校验失败反馈给模型；为此额外插入 in-progress 子目标后重发同一动作</td>
+        <td><span class="tag">问题暴露</span></td><td class="ev">DB:traces（operator：Plan ledger gate / Some action calls failed validation）</td></tr>
+      <tr class="problem" id="T14"><td><span class="id">T14</span></td><td class="t">14:32:00 / 09 / 16 / 20</td>
+        <td class="txt">记忆链路 <b>4 次静默降级</b>：<code>Transcript prompt path failed; falling back to the legacy 2-message build</code>（同一 Google 凭据错误），运行仍继续</td>
+        <td><span class="tag">问题放大</span></td><td class="ev">DB:traces（operator ×4）</td></tr>
+      <tr class="problem" id="T15"><td><span class="id">T15</span></td><td class="t">14:32:05 / 15 / 19</td>
+        <td class="txt">视觉步骤摘要 <b>3 次全部失败</b>：<code>Failed to dispatch visual step summary — API key required</code>，历史图像压缩这一能力在本运行中完全缺席</td>
+        <td><span class="tag">问题放大</span></td><td class="ev">DB:traces（summarizer ×3）</td></tr>
+      <tr class="problem" id="T16"><td><span class="id">T16</span></td><td class="t">14:32:07–09</td>
+        <td class="txt">UIAutomator2 服务被停、helper <b>回切</b>（<code>helper recovered</code>，新隧道 &lt;port&gt;）：同一次运行内层级来源发生 UIAutomator2 → helper 切回。<b>此后 step2–step4（含点开「电池」并读到 100%）改由 helper 感知与操控</b></td>
+        <td><span class="tag">问题放大</span></td><td class="ev">DB:traces（helper_manager / hierarchy_backend）；run_outcome.environment.switches</td></tr>
+      <tr id="T17"><td><span class="id">T17</span></td><td class="t">14:32:04 / 14</td>
+        <td class="txt">步 1、步 2 均为 <code>tap(72,143)</code>（无障碍 → 其他设置 → 设置主页）。<b>经核实为必要动作而非重复</b>：两次返回对应两级页面，原始思考明确记录「上一次返回把我从无障碍带到了其他设置」</td>
+        <td></td><td class="ev">DB:steps#1,#2；DB:traces raw_thinking 14:32:14</td></tr>
+      <tr id="T18"><td><span class="id">T18</span></td><td class="t">14:32:18–19</td>
+        <td class="txt">步 3：<code>tap(387,261)</code> 命中「电池」（门禁目标 <code>android:id/title</code>），进入电池页</td>
+        <td><span class="tag ok">问题规避</span></td><td class="ev">DB:steps#3；DB:traces（precondition_xml / adb_driver input tap 387 260）</td></tr>
+      <tr class="problem" id="T19"><td><span class="id">T19</span></td><td class="t">14:32:24–26</td>
+        <td class="txt">步 4：模型判断里程碑全部完成、未调用任何工具（日志 <code>LLM stopped without calling any tool. Encouraging action.</code>），但该步仍以<b>空动作</b>入库</td>
+        <td><span class="tag">问题放大</span></td><td class="ev">DB:steps#4（action=None）；DB:traces（operator）</td></tr>
+      <tr class="problem" id="T20"><td><span class="id">T20</span></td><td class="t">14:32:26–33</td>
+        <td class="txt">终检：同一检查项被登记两次（带 <code>[verify]</code> 前缀者 passed，裸文本者因「no verdict produced for this item」判 <b>inconclusive</b>），会话以 <code>completed</code> 结束但判定为 <code>passed=1 / inconclusive=1</code></td>
+        <td><span class="tag">问题暴露</span></td><td class="ev">check_ledger.jsonl 两行同 item_text；<code>&lt;analyzed-repo&gt;/agents/checker/checker.py:462-472</code>（<code>covered = {(v.kind, v.item_text)}</code> 精确匹配）</td></tr>
+      <tr class="problem" id="T21"><td><span class="id">T21</span></td><td class="t">14:32:34</td>
+        <td class="txt">归档阶段 <code>Found 0 images to compile / Found 0 steps to compile</code>，归档目录仅留录像；数据库内实有 4 步与截图，归档产物无法用于追溯</td>
+        <td><span class="tag">问题暴露</span></td><td class="ev">DB:traces（media）；traces/…_PASS_…/steps.json = <code>[]</code>、steps/ 为空</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===================== 3 ===================== -->
+<section id="s3">
+  <h2><span class="n">3</span>问题影响</h2>
+  <table>
+    <thead><tr><th style="width:70px">问题</th><th style="width:120px">时间线</th><th style="width:210px">结果维度</th><th>过程维度</th><th style="width:64px">严重度</th></tr></thead>
+    <tbody>
+      <tr id="P1"><td><span class="id">P1</span></td><td><a href="#T7">T7</a></td>
+        <td>本次运行<b>任务失败</b>（12s 内终止，零动作、零结论）</td>
+        <td>前置动作冗余：安装 helper、起录屏、等 6s 录制全部白费（约 6s + 一次安装/attach）</td><td>高</td></tr>
+      <tr id="P2"><td><span class="id">P2</span></td><td><a href="#T14">T14</a>、<a href="#T15">T15</a></td>
+        <td><b>结果可信度下降</b>：任务虽完成，但记忆压缩（4 次）与视觉摘要（3 次）在本运行中实际缺席，"completed" 掩盖了能力残缺</td>
+        <td>无效重试 ×7（每次失败后被静默吞掉并继续）；后续步骤在无历史图像摘要的上下文上决策</td><td>高</td></tr>
+      <tr id="P3"><td><span class="id">P3</span></td><td><a href="#T9">T9</a></td>
+        <td><b>超时</b>：单条 adb 探测挂起 30s，连带重试共空转 59.8s（占总时长 51%）</td>
+        <td>等待空转；探测失败被当作"helper 不可用"处理（误判）</td><td>高</td></tr>
+      <tr id="P4"><td><span class="id">P4</span></td><td><a href="#T10">T10</a>、<a href="#T16">T16</a></td>
+        <td>无直接影响，但留下降级风险（UIAutomator2 会抑制无障碍服务）</td>
+        <td><b>执行路径切换</b>：一次运行内 UIAutomator2→helper 两次切换；<b>规划与 step1 用 UIAutomator2、step2–4 用 helper</b>，同一次运行的感知/操控来源不一致，归因与复现都变难（且 UIAutomator2 的 UiAutomation 连接本身会抑制无障碍服务，正是靠 14:32:07 主动停掉它，helper 才在 2 秒后回切）</td><td>中</td></tr>
+      <tr id="P5"><td><span class="id">P5</span></td><td><a href="#T13">T13</a></td>
+        <td>无直接影响（动作最终执行成功）</td>
+        <td><b>无效重试</b>：首个动作被门禁退回 → 额外插入子目标 → 重发同一动作，多 1 次 LLM 调用（约 1.3 万 prompt tokens）</td><td>中</td></tr>
+      <tr id="P6"><td><span class="id">P6</span></td><td><a href="#T20">T20</a></td>
+        <td><b>结论不完整</b>：<code>inconclusive=1</code> 由重复登记产生，而非真实未验证项；汇报口径被污染</td>
+        <td>裁决按 <code>(kind, item_text)</code> 精确匹配（<code>checker.py:462-472</code>）；模型回判时给 item_text 加了 <code>[verify] (on_complete)</code> 前缀，声明项因此未命中，被追加一条「no verdict produced」填充项冒充缺项</td><td>中</td></tr>
+      <tr id="P7"><td><span class="id">P7</span></td><td><a href="#T21">T21</a></td>
+        <td>结论可追溯性受损：无法用归档产物复算结论</td>
+        <td><b>证据缺失</b>：归档 <code>0 images / 0 steps</code>，而 DB 内有 4 步与截图；本次复盘被迫直接查库</td><td>中</td></tr>
+      <tr id="P8"><td><span class="id">P8</span></td><td><a href="#T11">T11</a></td>
+        <td>无直接影响</td>
+        <td><b>冗余步骤 ×2</b>：起始页面为上一轮调试遗留的「无障碍」页，计划被迫先执行两次返回导航</td><td>低</td></tr>
+      <tr id="P9"><td><span class="id">P9</span></td><td><a href="#T19">T19</a></td>
+        <td>无直接影响（终检仍通过）</td>
+        <td><b>空步入库</b>：无动作的步骤被记为 step 4，步数与真实动作数不一致</td><td>低</td></tr>
+      <tr id="P10"><td><span class="id">P10</span></td><td><a href="#T5">T5</a>、<a href="#T11">T11</a>、<a href="#T6">T6</a></td>
+        <td>无直接影响</td>
+        <td><b>环境降级 + 固定等待</b>：保活命令不被设备支持（每次会话重复尝试并退回 5s 心跳）；两次录屏各等待 6s</td><td>低</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===================== 4 ===================== -->
+<section id="s4">
+  <h2><span class="n">4</span>根因分析</h2>
+
+  <div class="card r1" id="R1">
+    <h4>R1 · 模型接入与配置不一致：无 Google 凭据环境下，Flash/记忆/摘要链路仍走 Google 客户端<span class="cls model">模型原因</span></h4>
+    <p><b>触发条件与生命周期：</b>工作区档位在当日已切到 <code>openai/deepseek-flash</code>（T1），而 Flash 运行链路的模型构造点仍固定为 Google：<code>&lt;analyzed-repo&gt;/agents/flash/runner.py:287</code> 写死 <code>gemini-2.5-flash</code>；<code>&lt;analyzed-repo&gt;/agents/flash/summarizer.py:169/173</code> 与 <code>&lt;analyzed-repo&gt;/memory/chunking.py:328/335</code> 调用 <code>get_google_llm(...)</code>，把配置里的模型名（deepseek-flash）交给 Google 客户端。环境侧 <code>GOOGLE_API_KEY</code>/<code>GEMINI_API_KEY</code> 为空、<code>OPENAI_BASE_URL</code> 指向自建端点。于是同一根因在两次运行中呈现两种形态：Flash 直接崩（T7），Pro 静默降级（T14、T15）。</p>
+    <p><b>证据：</b><code>DB:traces</code> 14:14:56 error 行；14:32:00/09/16/20 四条 <code>Transcript prompt path failed… ChatGoogleGenerativeAI</code>；14:32:05/15/19 三条 <code>Failed to dispatch visual step summary… API key required</code>；代码位置见上；<code>config/&lt;analyzed-repo&gt;.jsonc</code> 与 <code>.env</code> 键值状态（T1）。</p>
+    <p><b>关联问题：</b><a href="#P1">P1</a>、<a href="#P2">P2</a> ｜ <b>关联改进项：</b><a href="#I1">I1</a>、<a href="#I2">I2</a>、<a href="#I3">I3</a></p>
+  </div>
+
+  <div class="card r2" id="R2">
+    <h4>R2 · 环境不稳定：单条 adb 探测挂起 30s，设备保活能力缺失<span class="cls env">环境原因</span></h4>
+    <p><b>触发条件与生命周期：</b>运行 2 启动时（T9）对设备执行 <code>dumpsys package</code> 探测，该命令 30s 未返回（同一设备在 14:14 的同类操作仅耗时 4s，说明是瞬时环境抖动/设备端卡顿）；客户端因此判定 helper 不可用并降级（T10），并在 30s 后重试成功（T16 回切）。设备侧 <code>set-wakelock</code> 与 USB stay-awake 均不被支持（T5），每次会话都要走一遍失败再退回 5s 心跳。</p>
+    <p><b>证据：</b>14:31:35 <code>… timed out after 30.0 seconds); serving from UIAutomator2 and retrying the helper in 30s</code>；自动检出的 59.8s 静默间隔；14:14:48/49 与 14:31:39 两组保活失败日志；<code>run_outcome.environment.switches</code>（14:32:09 helper recovered）。</p>
+    <p><b>关联问题：</b><a href="#P3">P3</a>、<a href="#P4">P4</a>、<a href="#P10">P10</a> ｜ <b>关联改进项：</b><a href="#I4">I4</a>、<a href="#I5">I5</a></p>
+  </div>
+
+  <div class="card r3" id="R3">
+    <h4>R3 · Agent 框架：门禁、检查项登记与归档三处不可靠<span class="cls fw">框架原因</span></h4>
+    <p><b>触发条件与生命周期：</b>④ plan ledger gate 要求动作所属里程碑先处于 in-progress，而操作器首轮动作与里程碑更新不同批次提交，导致动作被退回并重发（T13，P5）；② 终检的裁决按 <code>(kind, item_text)</code> <b>精确字符串</b>匹配（<code>checker.py:462-472</code>）：模型回判时把声明项文本带上了 <code>[verify] (on_complete)</code> 前缀，于是声明项判为「未产生裁决」并被追加一条 inconclusive 填充项（T20，P6）；同处 <code>checker.py:449</code> 还把无证据的 failed 降级为 inconclusive，是同一类"结论噪声"的第二个来源；③ 归档器在收尾时读不到 DB 中的 steps/images，产出空归档（T21，P7）；④ 模型未调用工具时仍记录一步（T19，P9）。</p>
+    <p><b>证据：</b>14:32:02 <code>Plan ledger gate: bouncing action. Not executed…</code> 与 <code>Some action calls failed validation. Feeding back to LLM.</code>；<code>check_ledger.jsonl</code> 两行同 <code>item_text</code>（一行 passed、一行 inconclusive「no verdict produced」）；14:32:34 <code>Found 0 images to compile / Found 0 steps to compile</code> 与 <code>steps.json=[]</code>；<code>DB:steps#4</code>（action=None）。</p>
+    <p><b>关联问题：</b><a href="#P5">P5</a>、<a href="#P6">P6</a>、<a href="#P7">P7</a>、<a href="#P9">P9</a> ｜ <b>关联改进项：</b><a href="#I6">I6</a>、<a href="#I7">I7</a>、<a href="#I8">I8</a></p>
+  </div>
+
+  <div class="card r4" id="R4">
+    <h4>R4 · 任务与流程：用例未约定前置状态与验收口径<span class="cls task">任务原因</span></h4>
+    <p><b>触发条件与生命周期：</b>用例文本仅一句 <code>Open Settings and check the Battery level</code>：既未约定起始页面，也未定义"check"的判定口径。上一轮 helper 调试把设备停在「无障碍」设置页，运行 2 因此多花两次返回导航（T11，P8）；验收口径缺失则由规划器现场补了一条自造检查项（T12、T20），这既增加了 LLM 调用，也正是它后来被重复登记并产生 inconclusive 的载体。</p>
+    <p><b>证据：</b><code>notes/task_plan.md</code> 首条为「Navigate from the currently open Accessibility page (无障碍) back to the Settings home…」；规划器 3 次 LLM 调用中 1 次专用于补验收项（14:31:57 <code>update_note</code> 加入 <code>(Captured …)</code> 校验描述）；<code>DB:sessions#&lt;session-id-2&gt;</code> 的 goal 原文。</p>
+    <p><b>关联问题：</b><a href="#P8">P8</a>、<a href="#P6">P6</a>（上游） ｜ <b>关联改进项：</b><a href="#I9">I9</a>、<a href="#I10">I10</a></p>
+  </div>
+
+  <div class="note"><b>非问题项（已核实排除）：</b>步 1 与步 2 的 <code>tap(72,143)</code> 由自动信号标为「重复动作」，但原始思考与页面变化证明这是两级返回导航的必要动作（T17）——保留为记录，不计入问题。</div>
+</section>
+
+<!-- ===================== 5 ===================== -->
+<section id="s5">
+  <h2><span class="n">5</span>改进项（每条对应根因，决策留给下一轮）</h2>
+  <p class="sub" style="margin:0 0 12px">「决策」列交付时一律保持 <span class="dec">待决策</span>；决定后回写 已采纳/不采纳 并附可解析的引用（本报告已回写 I1、I4a、I9、I10 共 4 条）。「建议」列为本报告给出的倾向与理由，供你下一轮勾选。实施建议按「先止损、再治本」排序。</p>
+  <table>
+    <thead><tr><th style="width:56px">ID</th><th style="width:74px">关联根因</th><th>改进方案（可执行）</th><th style="width:96px">类型</th><th style="width:78px">成本</th><th>风险 / 副作用</th><th style="width:70px">建议</th><th style="width:88px">决策</th></tr></thead>
+    <tbody>
+      <tr id="I1"><td><span class="id">I1</span></td><td><a href="#R1">R1</a></td>
+        <td>[已实施] 把 Flash 链路与记忆/摘要链路的模型构造改为 provider 感知入口（<code>get_llm(ctx, name=…)</code> 或等价工厂），替换 <code>&lt;analyzed-repo&gt;/agents/flash/runner.py:287</code>、<code>&lt;analyzed-repo&gt;/agents/flash/summarizer.py:169/173</code>、<code>&lt;analyzed-repo&gt;/memory/chunking.py:328/335</code> 的 <code>get_google_llm</code> 硬编码；保留 Google 路径为可选分支</td>
+        <td>代码</td><td>中</td><td>摘要器输出格式可能随模型变化，需要回归视觉摘要的渲染与裁剪逻辑（现有 3 个 summarizer 用例可复用）</td><td>建议采纳</td><td class="dec">已采纳 · 2026-10-09 · <code>fix/provider-aware-lenses@72e0c5d</code>（66 个用例转绿）</td></tr>
+      <tr id="I2"><td><span class="id">I2</span></td><td><a href="#R1">R1</a></td>
+        <td>会话启动前置校验：在安装 helper / 启动录屏<b>之前</b>，对本次将要使用的每个节点做一次「provider 凭据可用」预检，缺失即快速失败并打印修复命令</td>
+        <td>代码</td><td>低</td><td>多一次启动期校验（毫秒级）；需维护"本会话将用到的节点"清单</td><td>建议采纳</td><td class="dec">待决策</td></tr>
+      <tr id="I3"><td><span class="id">I3</span></td><td><a href="#R1">R1</a></td>
+        <td>把运行期静默降级写入 <code>run_outcome.json</code>（transcript 回退次数、视觉摘要失败次数、层级来源切换次数），并在结论里提示「能力残缺」</td>
+        <td>代码</td><td>低</td><td>需定义降级计数的口径，避免把正常回退也算成缺陷</td><td>建议采纳</td><td class="dec">待决策</td></tr>
+      <tr id="I4"><td><span class="id">I4</span></td><td><a href="#R2">R2</a></td>
+        <td><b>[部分已实施：I4a]</b> adb 调用层加短超时（探测类 5–8s）与重试预算；<code>dumpsys package</code> 结果缓存/改用更轻的 <code>pm list packages</code>；一次运行内层级来源切换次数设上限（>1 次即上报环境不稳）<br><span class="sub">已实施：探测独立 6s 截止 + 轻量命令优先 + “慢 ≠ 不存在”（探测无答不再触发重装、不再判 helper 不可用）。未实施：固定 30s 不重试窗口（I4b）、降级写入 run_outcome（I4c）、切换上限（I4d）。</span></td>
+        <td>代码</td><td>中</td><td>超时缩短可能把"慢但成功"的探测误判为失败，需要保留一次重试</td><td>建议采纳</td><td class="dec">已采纳（部分）· 2026-10-09 · <code>fix/helper-probe-deadline@f7e2844</code>（I4a）；I4b/c/d 待决策</td></tr>
+      <tr id="I5"><td><span class="id">I5</span></td><td><a href="#R2">R2</a></td>
+        <td>保活能力探测一次并缓存：设备不支持 <code>set-wakelock</code>/USB stay-awake 时直接跳过并记录，不再每次会话重复尝试与退回</td>
+        <td>代码/环境</td><td>低</td><td>缓存需按设备+系统版本失效，避免换机后沿用旧结论</td><td>建议采纳</td><td class="dec">待决策</td></tr>
+      <tr id="I6"><td><span class="id">I6</span></td><td><a href="#R3">R3</a></td>
+        <td>plan ledger gate 与操作器原子化：允许「更新里程碑状态 + 提交动作」在同一批次内完成，或由门禁自动把目标里程碑置为 in-progress，而不是退回动作重发</td>
+        <td>代码</td><td>中</td><td>放宽门禁可能让里程碑状态与真实进度漂移，需要补一条一致性断言</td><td>建议观察</td><td class="dec">待决策</td></tr>
+      <tr id="I7"><td><span class="id">I7</span></td><td><a href="#R3">R3</a></td>
+        <td>裁决匹配改为<b>归一化匹配</b>（<code>checker.py:462-472</code>）：剥离 <code>[verify]</code>/<code>(on_complete)</code> 等前缀与多余空白后再比对 <code>(kind, item_text)</code>；声明项若确实没有裁决，应触发一次重试或显式失败，而不是静默填充 inconclusive（同理见 <code>:449</code> 的无证据降级）</td>
+        <td>代码</td><td>低</td><td>去重规则过宽可能合并掉真正不同的检查项，需以规范化后的完整文本比对</td><td>建议采纳</td><td class="dec">待决策</td></tr>
+      <tr id="I8"><td><span class="id">I8</span></td><td><a href="#R3">R3</a></td>
+        <td>修复 trace 归档：收尾编译应从 DataEngine 读取 steps/images 落盘（当前 <code>steps.json=[]</code>、steps/ 为空），否则外发归档无法复算结论</td>
+        <td>代码</td><td>中</td><td>归档体积增大（截图），需要保留现有压缩/清理策略</td><td>建议采纳</td><td class="dec">待决策</td></tr>
+      <tr id="I9"><td><span class="id">I9</span></td><td><a href="#R4">R4</a></td>
+        <td>用例模板增加两个必填字段：<b>前置状态</b>（起始页面）与<b>验收口径</b>（要读到的具体值与状态）。本次应写为「起始：设置主页；验收：电池页读数百分比 + 充电状态」</td>
+        <td>流程</td><td>低</td><td>存量用例需补齐字段，短期可先对失败/新用例强制</td><td>建议采纳</td><td class="dec">已采纳（部分·仅测试侧）· E2E 用例自带验收口径（<code>tests/e2e/test_device_battery_level.py</code>，tag <code>10091711-e2e-battery-level-case</code>）；产品侧待决策</td></tr>
+      <tr id="I10"><td><span class="id">I10</span></td><td><a href="#R4">R4</a>、<a href="#R2">R2</a></td>
+        <td>运行前状态复位：会话启动前回到约定起始页（或断言当前页符合前置状态，不符则复位并记录），避免从上一次调试遗留页面起跑</td>
+        <td>流程/工具</td><td>低</td><td>复位动作本身会改变设备状态，需在录像与时间线上明确标注</td><td>建议采纳</td><td class="dec">已采纳（部分·仅测试侧）· 用例运行前复位到主页（<code>tests/e2e/test_device_battery_level.py</code>，tag <code>10091711-e2e-battery-level-case</code>）；产品侧待决策</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===================== 6 ===================== -->
+<section id="s6">
+  <h2><span class="n">6</span>知识与工具沉淀（候选，等你决策后写入 skill 目录）</h2>
+  <table>
+    <thead><tr><th style="width:56px">ID</th><th style="width:74px">来源</th><th>沉淀内容</th><th style="width:280px">目标路径</th><th style="width:96px">状态</th></tr></thead>
+    <tbody>
+      <tr><td><span class="id">D1</span></td><td>本轮</td>
+        <td>运行取证采集器：一次命令产出一个事项的全部证据（会话/时间线/静默间隔/步骤/检查项/信号/git/操作侧动作）</td>
+        <td><code>writing-run-retrospectives/tools/collect_evidence.py</code></td><td>已沉淀</td></tr>
+      <tr><td><span class="id">D2</span></td><td>本轮</td>
+        <td>报告质量门：六节齐全、红色标记、T→P→R→I 关联完整、证据可溯源</td>
+        <td><code>writing-run-retrospectives/tools/verify_report.py</code></td><td>已沉淀</td></tr>
+      <tr><td><span class="id">K1</span></td><td>R1、P1、P2</td>
+        <td>「无 Google 凭据环境下的静默降级谱系」：同一根因的三种表现（启动即崩 / transcript 回退 / 视觉摘要失败）与识别用的日志特征</td>
+        <td><code>writing-run-retrospectives/knowledge/no-google-provider-degradation.md</code></td><td>建议沉淀</td></tr>
+      <tr><td><span class="id">K2</span></td><td>P3、P7</td>
+        <td>「运行取证速查」：<code>traces.payload.message</code> 才是失败真相（status 全为 success）；<code>check_ledger</code> 的 inconclusive 语义；归档为空时以 DB 为准</td>
+        <td><code>writing-run-retrospectives/knowledge/run-forensics.md</code></td><td>建议沉淀</td></tr>
+      <tr><td><span class="id">K3</span></td><td>P3</td>
+        <td>「时间线静默间隔判据」：>15s 或 >3×同会话 p50 间隔即单列成条；本次正是 59.8s 静默暴露了 30s 探测超时</td>
+        <td><code>writing-run-retrospectives/knowledge/timeline-gap-detection.md</code></td><td>建议沉淀</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<footer>
+  <b>证据来源（可复查）：</b>
+  ① 运行数据库 <code>traces/data_engine.db</code>：<code>sessions</code>=2 行（&lt;session-id-1&gt; / &lt;session-id-2&gt;）、<code>steps</code>=4 行、<code>traces</code>=264 行（含 <code>payload.message</code>）；<br>
+  ② 运行产物：<code>traces/web_&lt;epoch&gt;_&lt;session-id-1&gt;_FAIL_2026-10-09T14-14-44/</code>（录像、steps.json）、<code>traces/&lt;session-id-2&gt;-…_PASS_2026-10-09T14-30-36/</code>（<code>run_outcome.json</code>、<code>check_ledger.jsonl</code>、<code>notes/task_plan.md</code>、<code>notes/battery_check.md</code>、<code>recording.mp4</code>）；<br>
+  ③ 代码侧：git 提交 <code>c9f7266</code> / <code>b251263</code> / <code>4cd590a</code>（2026-10-09 13:51–14:00）与工作区未提交的 <code>config/&lt;analyzed-repo&gt;.jsonc</code>；<br>
+  ④ 操作侧：本机 agent 会话记录 <code>~/.dsh/sessions/&lt;workspace-slug&gt;/&lt;session-id&gt;/session.jsonl.zstd</code>（模型 <code>deepseek-official/deepseek-v4-flash</code>）；<br>
+  ⑤ 采集产物：<code>reports/.evidence/evidence-20261009-获取电池信息测试.json</code>（时间线 605 条，其中运行内 261 条折叠为 24 条关键事件、操作/代码侧 337 条、静默间隔 1 处、自动信号 27 条）。<br>
+  <b>数据缺口：</b>运行 1（&lt;session-id-1&gt;）未生成 <code>run_outcome.json</code> 与 <code>stdout.log</code>，其失败原因取自 DB 日志行；两次运行的 <code>recording.mkv</code> 中间文件已被清理，仅存 MP4；归档 <code>steps/</code> 为空（P7），步骤细节均以 DB 为准。<br>
+  构建标识：2026-10-09 18:20（含 I1 决策、I4a 部分采纳、后端归属澄清）· 时间线 21 条（红标 14）/ 问题 10 条 / 根因 4 类 / 改进项 10 项 · 表格列数已校验<br>
+  生成方式：skill <code>writing-run-retrospectives</code>（v1）· 报告为单文件自包含 HTML，可直接打印或归档。
+</footer>
+
+</div>
+</body>
+</html>

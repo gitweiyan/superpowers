@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>操作复盘 · {{EVENT_LABEL}}</title>
+<!--
+  复盘报告模板（skill: writing-run-retrospectives）
+  使用方式：复制本文件 → 用 evidence.json 填 {{...}} 占位符 → 运行
+            python tools/verify_report.py <报告文件> 直到全部 PASS。
+  硬性约束（质量门会逐条检查）：
+    * 单文件自包含：内联 CSS、无外链、UTF-8；不要引用 CDN 或图片文件。
+    * 六节齐全且顺序固定；每节标题文本必须包含节名。
+    * 时间线每条必须有：ID(T#) / 时间 / 事件（执行人+动作+对象） / 标记 / 证据。
+    * 含 问题引入|问题放大|问题暴露 的行必须 class="problem"（红色）；问题规避用绿色、不得标红。
+    * 关联必须可解析：P# 行引用真实 T#；R# 卡片引用真实 P# 与 I#；I# 行引用真实 R#；每个 R# 至少被 1 个 I# 引用。
+    * 每个 I# 的「决策」列必须写明决策：交付时写 待决策（报告只提方案，由人决定）；人决定后
+      回写 已采纳/不采纳，且 已采纳 必须引用能解析的 commit / tag / 仓库路径。
+    * 页脚必须列出「证据来源」与「数据缺口」。
+-->
+<style>
+  :root{
+    --ink:#1b1f24; --muted:#6b7280; --line:#e5e7eb; --bg:#f7f8fa; --card:#fff;
+    --red:#c1121f; --red-bg:#fdecec; --red-line:#e04b4b;
+    --amber:#b45309; --amber-bg:#fff7ed; --green:#15803d; --green-bg:#ecfdf3; --blue:#1d4ed8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 24px 64px}
+  header.report{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  h1{margin:0 0 6px;font-size:26px}
+  .sub{color:var(--muted);font-size:13px}
+  .chips{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:12.5px;background:#fbfbfd}
+  .chip.bad{color:var(--red);border-color:var(--red-line);background:var(--red-bg)}
+  .chip.ok{color:var(--green);border-color:#a7e0bf;background:var(--green-bg)}
+  .chip.warn{color:var(--amber);border-color:#f0c48a;background:var(--amber-bg)}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 28px;margin-top:20px}
+  h2{font-size:19px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  h2 .n{display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:8px;background:#eef2ff;color:var(--blue);font-size:14px;margin-right:10px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;vertical-align:top;text-align:left}
+  th{background:#f3f4f6;font-weight:600;white-space:nowrap}
+  td.t{white-space:nowrap;font-variant-numeric:tabular-nums;color:#374151;font-size:13px}
+  td.ev{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--muted);max-width:270px;word-break:break-all}
+  tr.problem{background:var(--red-bg)}
+  tr.problem td:first-child{border-left:4px solid var(--red)}
+  tr.problem .txt{color:#7f1010}
+  .tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;font-size:12px;background:var(--red);color:#fff;white-space:nowrap}
+  .tag.warn{background:var(--amber)}
+  .tag.ok{background:var(--green)}
+  .id{display:inline-block;min-width:34px;padding:1px 6px;border-radius:6px;background:#eef2ff;color:var(--blue);font:12px/1.5 ui-monospace,Menlo,monospace;text-align:center}
+  a{color:var(--blue);text-decoration:none;border-bottom:1px dotted #9db4f0}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 14px;font-size:14px}
+  .kv dt{color:var(--muted)} .kv dd{margin:0}
+  .note{background:#fbfbfd;border:1px dashed var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px}
+  .legend{font-size:13px;background:#fbfbfd;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .card{border:1px solid var(--line);border-left:4px solid #c7d2fe;border-radius:10px;padding:14px 16px;margin:12px 0;background:#fdfdff}
+  .card.r1{border-left-color:#ef4444}.card.r2{border-left-color:#f59e0b}
+  .card.r3{border-left-color:#8b5cf6}.card.r4{border-left-color:#0ea5e9}
+  .card h4{margin:0 0 8px;font-size:15px}
+  .card .cls{font-size:12px;color:#fff;background:#6b7280;border-radius:6px;padding:1px 8px;margin-left:8px}
+  .card .cls.env{background:#f59e0b}.card .cls.fw{background:#8b5cf6}
+  .card .cls.model{background:#ef4444}.card .cls.task{background:#0ea5e9}
+  .dec{color:var(--amber);font-weight:600}
+  footer{margin-top:20px;color:var(--muted);font-size:12.5px;line-height:1.8}
+  footer code{background:#eef2ff;border-radius:4px;padding:1px 5px}
+  @media print{body{background:#fff}section,header.report{box-shadow:none;break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="report">
+  <h1>操作复盘 · {{EVENT_LABEL}}</h1>
+  <div class="sub">被复盘仓库 <code>{{WORKSPACE}}</code> · 报告生成 {{GENERATED_AT}} · 数据来源：{{SOURCE_KINDS}}</div>
+  <div class="chips">
+    <span class="chip {{RESULT_CLASS}}">结果：{{RESULT_ONE_LINE}}</span>
+    <span class="chip">{{RUN_COUNT}} 次运行 / {{EVENT_COUNT}} 条关键事件 / {{PROBLEM_COUNT}} 个问题 / {{CAUSE_COUNT}} 类根因 / {{IMPROVEMENT_COUNT}} 个改进项</span>
+  </div>
+</header>
+
+<section id="s1">
+  <h2><span class="n">1</span>事项简介</h2>
+  <dl class="kv">
+    <dt>事项名称</dt><dd>{{EVENT_LABEL}}（本体目标：<code>{{GOAL}}</code>）</dd>
+    <dt>执行时间</dt><dd>{{TIME_RANGE}}（时区）{{PER_RUN_TIMES}}</dd>
+    <dt>执行人</dt><dd>{{HUMAN}}（操作方式）＋ {{AGENT_IDENTITY}}（provider/model）＋ 设备 {{DEVICE}}</dd>
+    <dt>执行概况</dt><dd>{{OVERVIEW}}</dd>
+    <dt>结果</dt><dd><b>功能结论：</b>{{FUNCTIONAL_RESULT}}<br><b>质量结论：</b>{{QUALITY_RESULT}}</dd>
+  </dl>
+  <div class="note" style="margin-top:14px"><b>一句话结论：</b>{{ONE_LINE_CONCLUSION}}</div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">2</span>详细执行时间线</h2>
+  <div class="legend">
+    <b>标记规则：</b><span class="tag">问题引入</span> 该时间点埋下后续故障；
+    <span class="tag">问题放大</span> 已有问题在此被扩大或产生额外代价；
+    <span class="tag">问题暴露</span> 问题在此以可观测形式呈现；
+    <span class="tag ok">问题规避</span> 有效的应对动作。
+    红色底纹行 = 含问题的条目（共 <b>{{PROBLEM_COUNT}}</b> 条）；「证据」列给出可复查来源。
+  </div>
+  <table>
+    <thead><tr><th style="width:74px">ID</th><th style="width:150px">时间</th><th>事件（执行人 + 动作 + 对象）</th><th style="width:96px">标记</th><th>证据</th></tr></thead>
+    <tbody>
+      <!-- 问题条目：<tr class="problem" id="T1"> ... <td><span class="tag">问题引入</span></td> ... -->
+      <!-- 正常条目：<tr id="T3"> ... <td></td> ... -->
+      {{TIMELINE_ROWS}}
+    </tbody>
+  </table>
+</section>
+
+<section id="s3">
+  <h2><span class="n">3</span>问题影响</h2>
+  <table>
+    <thead><tr><th style="width:70px">问题</th><th style="width:120px">时间线</th><th style="width:210px">结果维度</th><th>过程维度</th><th style="width:64px">严重度</th></tr></thead>
+    <tbody>
+      <!-- <tr id="P1"><td><span class="id">P1</span></td><td><a href="#T7">T7</a></td><td>结果维度...</td><td>过程维度...</td><td>高</td></tr> -->
+      {{PROBLEM_ROWS}}
+    </tbody>
+  </table>
+</section>
+
+<section id="s4">
+  <h2><span class="n">4</span>根因分析</h2>
+  <!-- 四类：environment / agent framework / model / task；每张卡片必须给出 触发条件、证据、关联问题、关联改进项 -->
+  <!-- <div class="card r1" id="R1"><h4>R1 · ... <span class="cls model">模型原因</span></h4>
+       <p><b>触发条件与生命周期：</b>...</p><p><b>证据：</b>...</p>
+       <p><b>关联问题：</b><a href="#P1">P1</a> ｜ <b>关联改进项：</b><a href="#I1">I1</a></p></div> -->
+  {{CAUSE_CARDS}}
+  <div class="note"><b>非问题项（已核实排除）：</b>{{DISMISSED_SIGNALS}}</div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">5</span>改进项（每条对应根因，决策留给下一轮）</h2>
+  <p class="sub" style="margin:0 0 12px">「决策」列交付时一律保持 <span class="dec">待决策</span>（报告只提方案）；你决定后回写 已采纳/不采纳 并附可解析的引用。「建议」列为本报告的倾向与理由。</p>
+  <table>
+    <thead><tr><th style="width:56px">ID</th><th style="width:74px">关联根因</th><th>改进方案（可执行）</th><th style="width:96px">类型</th><th style="width:78px">成本</th><th>风险 / 副作用</th><th style="width:70px">建议</th><th style="width:88px">决策</th></tr></thead>
+    <tbody>
+      <!-- <tr id="I1"><td><span class="id">I1</span></td><td><a href="#R1">R1</a></td><td>方案...</td><td>代码</td><td>中</td><td>风险...</td><td>建议采纳</td><td class="dec">待决策</td></tr> -->
+      {{IMPROVEMENT_ROWS}}
+    </tbody>
+  </table>
+</section>
+
+<section id="s6">
+  <h2><span class="n">6</span>知识与工具沉淀（候选，等决策后写入 skill 目录）</h2>
+  <table>
+    <thead><tr><th style="width:56px">ID</th><th style="width:74px">来源</th><th>沉淀内容</th><th style="width:280px">目标路径</th><th style="width:96px">状态</th></tr></thead>
+    <tbody>
+      <!-- <tr><td><span class="id">K1</span></td><td>R1、P1</td><td>知识点...</td><td><code>knowledge/xxx.md</code></td><td>建议沉淀</td></tr> -->
+      {{SINK_ROWS}}
+    </tbody>
+  </table>
+</section>
+
+<footer>
+  <b>证据来源（可复查）：</b>{{EVIDENCE_LIST}}<br>
+  <b>数据缺口：</b>{{DATA_GAPS}}<br>
+  生成方式：skill <code>writing-run-retrospectives</code> · 报告为单文件自包含 HTML，可直接打印或归档。
+</footer>
+
+</div>
+</body>
+</html>

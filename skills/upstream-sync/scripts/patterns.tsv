@@ -1,0 +1,16 @@
+cred-aws-access-key	content	AKIA[0-9A-Z]{16}	AWS 访问密钥 id
+cred-openai-style	content	sk-[A-Za-z0-9]{24,}	OpenAI 风格密钥
+cred-github-token	content	gh[pousr]_[A-Za-z0-9]{20,}	GitHub 令牌
+cred-github-pat	content	github_pat_[A-Za-z0-9_]{20,}	GitHub 细粒度 PAT
+cred-slack-token	content	xox[baprs]-[A-Za-z0-9-]{10,}	Slack 令牌
+cred-google-api-key	content	AIza[0-9A-Za-z_-]{35}	Google API 密钥
+cred-private-key-block	content	-----BEGIN [A-Z ]*PRIVATE KEY-----	私钥块
+cred-generic-assign	content	(api[_-]?key|apikey|secret|token|password|passwd|credential)[[:space:]]*[:=][[:space:]]*["'\'']?[A-Za-z0-9/+_-]{12,}	通用凭据赋值
+id-cn-mobile	content	(^|[^0-9])1[3-9][0-9]{9}([^0-9]|$)	中国大陆手机号
+id-email	content	[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}	邮箱地址
+env-abs-home	content	/Users/[[:alnum:]_.-]+/	绝对家目录路径
+env-abs-linux-home	content	/home/[[:alnum:]_.-]+/	Linux 绝对家目录路径
+env-private-ip	content	(^|[^0-9])(10[.][0-9]{1,3}|192[.]168|172[.](1[6-9]|2[0-9]|3[01]))[.][0-9]{1,3}[.][0-9]{1,3}	内网 IP
+env-localhost-port	content	(127[.]0[.]0[.]1|localhost):[0-9]{2,5}	本地服务端点
+env-session-id	content	(session|run|trace)[_-]?id[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{8,}	会话/运行标识
+path-secret-file	pathname	(^|[.])env([.].*)?$|credentials.*|[.]pem$|[.]key$|[.]p12$|id_rsa.*|[.]netrc$|[.]npmrc$	凭据类文件名
